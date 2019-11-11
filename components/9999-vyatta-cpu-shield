@@ -1,0 +1,48 @@
+#!/bin/sh
+
+#----- Copyright & License -----
+#
+# Copyright (C) 2018-2019 AT&T Intellectual Property.
+# All Rights Reserved.
+#
+# Copyright (c) 2015-2017 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+#----- Copyright & License -----
+
+#
+# Set up early CPU shielding
+#
+CSET_ROOT=/dev/cpuset
+CSET_CP=$CSET_ROOT/vyatta-cp
+CSET_DP=$CSET_ROOT/vyatta-dp
+
+cpu_shield() {
+
+echo -n "Creating vRouter resource partition ..."
+
+mkdir -p $CSET_ROOT
+mount -t cgroup -o cpuset cpuset $CSET_ROOT
+
+mkdir -p $CSET_CP $CSET_DP
+
+echo 0 > $CSET_CP/cpuset.cpus
+echo 0 > $CSET_CP/cpuset.mems
+
+echo -n "moving tasks ..."
+echo 1 > $CSET_CP/tasks
+echo $$ > $CSET_CP/tasks
+
+for i in `cat $CSET_ROOT/tasks`; do echo $i > $CSET_CP/tasks; done 2> /dev/null
+
+# initial data plane partition gets all remaining CPUs and mem nodes
+cpus=$(grep -c '^processor' /proc/cpuinfo)
+echo "1-$(($cpus-1))" > $CSET_DP/cpuset.cpus
+
+cat $CSET_ROOT/cpuset.mems > $CSET_DP/cpuset.mems
+echo "done."
+}
+
+[ -z "`grep cpushield /proc/cmdline`" ] || cpu_shield

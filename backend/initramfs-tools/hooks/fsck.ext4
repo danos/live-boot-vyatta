@@ -1,0 +1,33 @@
+#!/bin/sh
+
+#----- Copyright & License -----
+#
+# Copyright (C) 2018-2019 AT&T Intellectual Property.
+# All Rights Reserved.
+#
+# Copyright (c) 2015-2017 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+#----- Copyright & License -----
+
+PREREQ=""
+
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. /usr/share/initramfs-tools/scripts/functions
+. /usr/share/initramfs-tools/hook-functions
+
+copy_exec /sbin/fsck.ext4
+copy_exec /sbin/fsck

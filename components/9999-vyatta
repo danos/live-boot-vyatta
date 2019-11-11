@@ -1,0 +1,69 @@
+#!/bin/sh
+
+#----- Copyright & License -----
+#
+# Copyright (C) 2018-2019 AT&T Intellectual Property.
+# All Rights Reserved.
+#
+# Copyright (c) 2015-2017 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+#----- Copyright & License -----
+
+#
+# This needs to run *AFTER* 9990-aaa-fixme.sh as long as that script is
+# unconditionally setting the default for LIVE_MEDIA_PATH or we have a proper
+# way to hook into commandline parsing.
+#
+# This needs to run *AFTER* 9990-netbase.sh! It is called after the initramfs
+# mounted the rootfs.
+#
+
+Netbase ()
+{
+    set -- ${LIVE_BOOT_CMDLINE}
+    for _PARAMETER in "$@"
+    do
+	case "${_PARAMETER}" in
+	    cloud-init)
+		log_begin_msg "Configuring cloud-init (DHCP)"
+
+		do_netsetup
+
+		log_end_msg
+		;;
+
+	    ip=dhcp)
+		log_begin_msg "Configuring DHCP"
+
+		do_netsetup
+
+		log_end_msg
+		;;
+	esac
+    done
+}
+
+Cmdline_vyatta ()
+{
+    # since this is executed when sourced (before 9990-main.sh)
+    # we read the kernel cmdline directly
+    set -- $(cat /proc/cmdline)
+    for _PARAMETER in "$@"
+    do
+	case "${_PARAMETER}" in
+	    vyatta-union=*)
+		LIVE_MEDIA_PATH="${_PARAMETER#vyatta-union=}"
+		PERSISTENCE_PATH="${LIVE_MEDIA_PATH}"
+		PERSISTENCE_STORAGE="directory"
+		PERSISTENCE="Yes"
+		export LIVE_MEDIA_PATH PERSISTENCE_PATH PERSISTENCE_STORAGE \
+		    PERSISTENCE
+		;;
+	esac
+    done
+}
+
+Cmdline_vyatta

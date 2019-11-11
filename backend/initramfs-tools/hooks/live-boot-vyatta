@@ -1,0 +1,81 @@
+#!/bin/sh
+
+#----- Copyright & License -----
+#
+# Copyright (C) 2018-2019 AT&T Intellectual Property.
+# All Rights Reserved.
+#
+# Copyright (c) 2015-2017 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+#----- Copyright & License -----
+
+set -e
+
+PREREQ="busybox live"
+prereqs()
+{
+    echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+# Begin real processing below this line
+
+[ "${QUIET}" ] || echo -n "live-boot-vyatta:"
+
+# Copy configuration file to initramfs
+if [ -e /etc/live/boot.conf ] ; then
+    [ "${QUIET}" ] || echo -n " config"
+
+    mkdir -p "${DESTDIR}"/etc/live
+    cp -f /etc/live/boot.conf "${DESTDIR}"/etc/live/boot.conf
+fi
+
+# tftp required for PXE boot
+# prefer tftp from busybox but fallback standard tftp
+if [ -x ${DESTDIR}/busybox ] &&
+    [ "$(${DESTDIR}/busybox --list | grep -E '^tftp$')" == "tftp" ]; then
+    [ "${QUIET}" ] || echo -n " bb-tftp"
+
+    rm -f ${DESTDIR}/bin/tftp
+    ln -s busybox ${DESTDIR}/bin/tftp
+elif [ -x /usr/bin/tftp ]; then
+    [ "${QUIET}" ] || echo -n " tftp"
+
+    rm -f ${DESTDIR}/bin/tftp
+    copy_exec /usr/bin/tftp /bin/tftp
+fi
+
+# ifconfig and tee required for 9990-networking (cloud-init)
+if [ -x ${DESTDIR}/busybox ] &&
+    [ "$(${DESTDIR}/busybox --list | grep -E '^ifconfig$')" == "ifconfig" ]; then
+    [ "${QUIET}" ] || echo -n " bb-ifconfig"
+    rm -f ${DESTDIR}/sbin/ifconfig
+    ln -s busybox ${DESTDIR}/sbin/ifconfig
+elif [ -x /sbin/ifconfig ]; then
+    [ "${QUIET}" ] || echo -n " ifconfig"
+    rm -f ${DESTDIR}/sbin/ifconfig
+    copy_exec /sbin/ifconfig /sbin/ifconfig
+fi
+
+if [ -x ${DESTDIR}/busybox ] &&
+    [ "$(${DESTDIR}/busybox --list | grep -E '^tee$')" == "tee" ]; then
+    [ "${QUIET}" ] || echo -n " bb-tee"
+    rm -f ${DESTDIR}/usr/bin/tee
+    ln -s busybox ${DESTDIR}/usr/bin/tee
+elif [ -x /usr/bin/tee ]; then
+    [ "${QUIET}" ] || echo -n " tee"
+    rm -f ${DESTDIR}/usr/bin/tee
+    copy_exec /usr/bin/tee /usr/bin/tee
+fi
+
+[ "${QUIET}" ] || echo .
